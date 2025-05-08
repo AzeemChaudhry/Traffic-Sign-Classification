@@ -6,25 +6,7 @@ filtered_data_dir = r'Data\filtered_data.csv' ## path to the filtered data csv f
 
 ## reading the csv file and extracting the images of each respective class 
 
-def read_csv(file_path, base_dir=''):
-    data = np.genfromtxt(file_path, delimiter=',', dtype=None, encoding='utf-8-sig')
 
-    # Dictionary to store images grouped by label
-    images_by_label = {}
-
-    for row in data[1:]:  # Skip header
-        label = row[0]
-        image_path = os.path.normpath(row[1])  # Normalize the path
-        full_image_path = os.path.normpath(os.path.join(base_dir, image_path))
-        print(full_image_path, os.path.exists(full_image_path))
-        if label not in images_by_label:
-            images_by_label[label] = []
-
-        images_by_label[label].append({
-            "path": image_path,
-            "image": cv2.imread(full_image_path)
-        })
-    return images_by_label
 ## mean filter 
 def mean_filter(img):
     kernel = np.ones((3, 3), dtype=np.float32) / 9
@@ -126,7 +108,6 @@ def unsharp_mask(img, ksize=5, sigma=1.0, alpha=1.5):
 
 ##
 
-images = read_csv(filtered_data_dir)
-print(images)
+
 #np.save('images_by_label.npy', images) # save the original compiled images to a numpy file
 
