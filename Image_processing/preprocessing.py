@@ -29,28 +29,71 @@ def read_csv(file_path, test_dir):
 ## mean filter 
 def mean_filter(img):
     kernel = np.ones((3, 3), dtype=np.float32) / 9
-    return cv2.filter2D(img, -1, kernel)
+    h, w = img.shape
+    filtered_img = np.zeros_like(img)
+
+    # Apply the kernel (filter) over the image with padding
+    padded_img = np.pad(img, 1, mode='constant', constant_values=0)
+
+    for i in range(h):
+        for j in range(w):
+            region = padded_img[i:i+3, j:j+3]
+            filtered_img[i, j] = np.sum(region * kernel)
+
+    return filtered_img
+
 
 ## gaussian filter
 def gaussian_filter(img, sigma=1.0, ksize=3):
-    k = cv2.getGaussianKernel(ksize, sigma)
-    kernel = k @ k.T  # 2D Gaussian
-    return cv2.filter2D(img, -1, kernel)
+    # Generate the Gaussian kernel
+    kernel_range = np.linspace(-ksize//2, ksize//2, ksize)
+    x, y = np.meshgrid(kernel_range, kernel_range)
+    kernel = np.exp(-(x**2 + y**2) / (2 * sigma**2))
+    kernel /= np.sum(kernel)  # Normalize the kernel
+    
+    h, w = img.shape
+    filtered_img = np.zeros_like(img)
+
+    # Apply the kernel (filter) over the image with padding
+    padded_img = np.pad(img, ksize//2, mode='constant', constant_values=0)
+
+    for i in range(h):
+        for j in range(w):
+            region = padded_img[i:i+ksize, j:j+ksize]
+            filtered_img[i, j] = np.sum(region * kernel)
+
+    return filtered_img
+
 
 ## median filter
 def median_filter(img, ksize=3):
-    return cv2.medianBlur(img, ksize)
+    h, w = img.shape
+    filtered_img = np.zeros_like(img)
+
+    # Apply the median filter over the image with padding
+    padded_img = np.pad(img, ksize//2, mode='constant', constant_values=0)
+
+    for i in range(h):
+        for j in range(w):
+            region = padded_img[i:i+ksize, j:j+ksize]
+            filtered_img[i, j] = np.median(region)
+
+    return filtered_img
+
 
 ##adaptive filter
 def adaptive_median_filter(img, max_ksize=7):
-    if len(img.shape) == 3:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
-    padded_img = np.pad(img, max_ksize // 2, mode='edge')
-    filtered = np.zeros_like(img)
+    if len(img.shape) == 3:  # Convert to grayscale if it's a color image
+        img = np.mean(img, axis=-1).astype(np.uint8)
 
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
+    h, w = img.shape
+    filtered_img = np.zeros_like(img)
+
+    # Apply the adaptive median filter
+    padded_img = np.pad(img, max_ksize // 2, mode='edge')
+
+    for i in range(h):
+        for j in range(w):
             ksize = 3
             while ksize <= max_ksize:
                 r = ksize // 2
@@ -62,23 +105,28 @@ def adaptive_median_filter(img, max_ksize=7):
 
                 if z_min < z_med < z_max:
                     if z_min < z_xy < z_max:
-                        filtered[i, j] = z_xy
+                        filtered_img[i, j] = z_xy
                     else:
-                        filtered[i, j] = z_med
+                        filtered_img[i, j] = z_med
                     break
                 else:
                     ksize += 2
             if ksize > max_ksize:
-                filtered[i, j] = z_med
-    return filtered
+                filtered_img[i, j] = z_med
+
+    return filtered_img
+
 
 ## Unsharp masking 
 def unsharp_mask(img, ksize=5, sigma=1.0, alpha=1.5):
     blurred = gaussian_filter(img, sigma, ksize)
-    sharpened = cv2.addWeighted(img, 1 + alpha, blurred, -alpha, 0)
+    sharpened = img + alpha * (img - blurred)
+    sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)  # Ensure values are within 0-255
     return sharpened
 
+
 ##
+
 images = read_csv(filtered_data_dir,'Data/')
-np.save('images_by_label.npy', images) # save the original compiledd images to a numpy file
+np.save('images_by_label.npy', images) # save the original compiled images to a numpy file
 
